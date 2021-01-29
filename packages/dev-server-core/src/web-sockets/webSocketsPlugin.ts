@@ -17,25 +17,42 @@ export function webSocketsPlugin(): Plugin {
 
     serve(context) {
       if (context.path === NAME_WEB_SOCKET_IMPORT) {
-        return `export const webSocket = ('WebSocket' in window) ? new WebSocket(\`ws\${location.protocol === 'https:' ? 's': ''}://\${location.host}\`) : null;
-export const webSocketOpened = new Promise((resolve) => {
-  if (!webSocket) {
-    resolve();
-  } else {
-    webSocket.addEventListener('open', () => {
+        return `
+let socket;
+let opened;
+let nextMessageId;
+if (window.parent !== window && window.parent.__WDS_WEB_SOCKET__ !== undefined) {
+  const info = window.parent.__WDS_WEB_SOCKET__;
+  socket = info.socket;
+  opened = info.opened;
+  nextMessageId = info.nextMessageId;
+  console.warn('Using parent websocket: ' + window.location.href);
+} else {
+  console.warn('Creating websocket: ' + window.location.href);
+  socket = ('WebSocket' in window) ? new WebSocket(\`ws\${location.protocol === 'https:' ? 's': ''}://\${location.host}\`) : null;
+  opened = new Promise((resolve) => {
+    if (!webSocket) {
       resolve();
-    });
+    } else {
+      webSocket.addEventListener('open', () => {
+        resolve();
+      });
+    }
+  });
+  let messageId = 0;
+  nextMessageId = function () {
+    if (messageId >= Number.MAX_SAFE_INTEGER) {
+      messageId = 0;
+    }
+    messageId += 1;
+    return messageId;
   }
-});
-
-let messageId = 0;
-function nextMessageId() {
-  if (messageId >= Number.MAX_SAFE_INTEGER) {
-    messageId = 0;
-  }
-  messageId += 1;
-  return messageId;
+  window.__WDS_WEB_SOCKET__ = {socket, opened, nextMessageId};
 }
+
+export const webSocket = socket;
+export const webSocketOpened = opened;
+
 
 export async function sendMessage(message) {
   if (!message.type) {
