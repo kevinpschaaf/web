@@ -26,9 +26,7 @@ if (window.parent !== window && window.parent.__WDS_WEB_SOCKET__ !== undefined) 
   socket = info.socket;
   opened = info.opened;
   nextMessageId = info.nextMessageId;
-  console.warn('Using parent websocket: ' + window.location.href);
 } else {
-  console.warn('Creating websocket: ' + window.location.href);
   socket = ('WebSocket' in window) ? new WebSocket(\`ws\${location.protocol === 'https:' ? 's': ''}://\${location.host}\`) : null;
   opened = new Promise((resolve) => {
     if (!webSocket) {
